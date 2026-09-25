@@ -18,6 +18,8 @@ DIAR is free to download and use. Do not configure Play Billing products for it.
 4. When prompted, let EAS create and retain the Android upload keystore. Back up the upload credentials securely from the EAS credentials dashboard. Keep the package ID `com.diar.privatejournal` and increment `android.versionCode` for each later Play upload.
 5. Download the resulting signed `.aab`. An AAB is for Play Console; it is not directly installed on an emulator. Use an internal testing release to install the Play-generated APKs.
 
+The earlier downloadable APK was signed with a debug key. It cannot be upgraded in place to the Play-signed app. Anyone who wrote in that preview should export an encrypted backup and keep the passphrase before uninstalling it, then import the backup into the Play-installed app.
+
 ## 3. Finish Play Console setup
 
 Create a Google Play Console developer account and a **free** app. Upload the signed AAB to internal testing first. Complete the store listing, screenshots, content rating, Data safety form, and a hosted privacy policy. For account deletion, provide the deployed web deletion URL from step 1 and verify the in-app deletion path. Test sign in, account deletion, encrypted diary, backup, and restore on a Play-installed build before production rollout.
