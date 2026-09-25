@@ -1,0 +1,53 @@
+name: Android APK smoke test
+
+on:
+  push:
+    paths:
+      - .github/workflows/android-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download built APK
+        uses: actions/download-artifact@v4
+        with:
+          name: DIAR-android-apk
+          run-id: 36144096477
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: apk
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and launch APK
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install apk/app-release.apk
+            adb logcat -c
+            adb shell monkey -p com.diar.privatejournal 1
+            sleep 20
+            adb shell pidof com.diar.privatejournal
+            adb exec-out screencap -p > diar-smoke.png
+            adb shell uiautomator dump /sdcard/diar-ui.xml
+            adb shell cat /sdcard/diar-ui.xml | grep -Eq 'Create my private diary|A quiet place for your thoughts'
+      - name: Save emulator screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DIAR-emulator-smoke
+          path: diar-smoke.png
+          if-no-files-found: ignore
