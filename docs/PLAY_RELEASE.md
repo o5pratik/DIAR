@@ -6,9 +6,9 @@ DIAR is free to download and use. Do not configure Play Billing products for it.
 
 1. At [Supabase Dashboard](https://supabase.com/dashboard), create or select a project.
 2. Open **Connect** or **Project Settings → API Keys**. Copy the **Project URL** and **publishable key**. Do not use the service role/secret key in the app.
-3. In **Authentication → Providers**, enable Email. In **Authentication → URL Configuration**, allow `com.diar.privatejournal://auth/callback` and `https://YOUR_PROJECT_REF.supabase.co/functions/v1/delete-account` as redirect URLs. The default Magic Link template works. Set up production SMTP and verify a real sign in before public release.
+3. In **Authentication → Providers**, enable Email. In **Authentication → URL Configuration**, allow `com.diar.privatejournal://auth/callback` and `https://qtudcokmkwriylfsiqcm.supabase.co/functions/v1/delete-account` as redirect URLs. The default Magic Link template works. Set up production SMTP and verify a real sign in before public release.
 4. Put the two values in `.env.local` for local testing. Configure the same names in the EAS **production** environment for cloud builds: `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-5. Deploy `supabase/functions/delete-account` with JWT verification disabled as shown in the README. The function checks the user's bearer token for in-app deletion, or an emailed code for web deletion. Test both paths before submitting the app.
+5. Deploy `supabase/functions/delete-account` with JWT verification disabled as shown in the README. The function checks the user's bearer token for in-app deletion, or an emailed link for web deletion. Test both paths before submitting the app.
 
 ## 2. Make a signed Android App Bundle
 

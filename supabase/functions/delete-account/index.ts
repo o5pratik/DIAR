@@ -43,7 +43,7 @@ Deno.serve(async request => {
     if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json('Enter a valid email address.', 400);
     // Supabase applies its email OTP rate limits. Do not reveal whether the account exists.
     const { error } = await publicClient.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${url}/functions/v1/delete-account` } });
-    if (error && error.status === 429) return json('Please wait before requesting another code.', 429);
+    if (error && error.status === 429) return json('Please wait before requesting another link.', 429);
     return json('If this email has a DIAR account, a deletion link has been sent.', 200);
   }
 
