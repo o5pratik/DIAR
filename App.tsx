@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Pressable, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Linking, Pressable, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -13,7 +13,7 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { createPortableBackup, deleteDiary, loadDiary, readPortableBackup, releaseDiaryKey, saveDiary } from './src/storage/diaryStorage';
 import { bindAccountId, clearBoundAccountId, createDataKey, getBiometricPreference, getBoundAccountId, getPinLength, getThemePreference, removeSecurity, setBiometricPreference, setPin, setThemePreference, verifyPin } from './src/storage/secureStorage';
-import { supabase } from './src/auth/supabase';
+import { completeEmailLink, supabase } from './src/auth/supabase';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { AccountMismatchScreen } from './src/screens/AccountMismatchScreen';
 import { makeTheme, ThemePreference } from './src/theme/theme';
@@ -42,6 +42,7 @@ export default function App() {
   const saveTail = useRef<Promise<void>>(Promise.resolve());
   const phaseRef = useRef<Phase>('loading');
   const accountChangeRef = useRef(false);
+  const handledLink = useRef('');
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   const boot = useCallback(async () => {
@@ -70,6 +71,21 @@ export default function App() {
     }
   }, []);
   useEffect(() => { void boot(); }, [boot]);
+
+  useEffect(() => {
+    async function openEmailLink(url: string) {
+      if (handledLink.current === url) return;
+      handledLink.current = url;
+      try {
+        if (await completeEmailLink(url)) await boot();
+      } catch (error) {
+        Alert.alert('Sign in failed', error instanceof Error ? error.message : 'Request a new sign in link.');
+      }
+    }
+    const listener = Linking.addEventListener('url', event => { void openEmailLink(event.url); });
+    void Linking.getInitialURL().then(url => { if (url) void openEmailLink(url); });
+    return () => listener.remove();
+  }, [boot]);
 
   function forgetOpenDiary() {
     diaryRef.current = {};
@@ -254,7 +270,7 @@ export default function App() {
   if (phase === 'error') return <SafeAreaProvider><View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', padding: 30 }}><Text style={{ color: theme.ink, fontSize: 22, textAlign: 'center' }}>{bootError}</Text><Pressable onPress={() => void boot()} style={{ padding: 16, alignSelf: 'center' }}><Text style={{ color: theme.accent }}>Try again</Text></Pressable></View>{common}</SafeAreaProvider>;
 
   return <SafeAreaProvider>
-    {phase === 'account' && <AccountScreen theme={theme} onSignedIn={boot} />}
+    {phase === 'account' && <AccountScreen theme={theme} />}
     {phase === 'account-mismatch' && <AccountMismatchScreen theme={theme} email={accountEmail} onSignOut={signOut} onErase={eraseLocalForNewAccount} />}
     {phase === 'welcome' && <WelcomeScreen theme={theme} onContinue={() => setPhase('setup')} />}
     {phase === 'setup' && <PinScreen kind="setup" theme={theme} onSet={async pin => { await createDataKey(); await setPin(pin); setPinLength(pin.length as 4 | 6); await activateDiary(); }} />}
