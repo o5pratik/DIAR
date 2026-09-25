@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "DIAR",
+    "slug": "diar",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      "expo-secure-store",
+      ["expo-local-authentication", { "faceIDPermission": "Allow DIAR to unlock your private diary with Face ID." }]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.diar.privatejournal"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "allowBackup": false,
+      "package": "com.diar.privatejournal"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
