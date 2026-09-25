@@ -1,36 +1,30 @@
 # DIAR
 
-DIAR is a private, local-first diary for Android and iOS, built with Expo and React Native.
+DIAR is a free, private diary for Android and iOS, built with Expo and React Native. An email code signs the user in. Diary entries remain encrypted on the device and are never uploaded to Supabase. There are no ads, subscriptions, or purchases.
 
-## Run
+## Run locally
 
-Requires Node.js 22.13 or newer and a phone with Expo Go or an Android/iOS simulator.
+Requires Node.js 22.13 or newer, a Supabase project, and a phone with Expo Go or an Android/iOS simulator.
 
-```sh
-npm install
-npm start
-```
+1. Copy `.env.example` to `.env.local`. Fill in the Supabase Project URL and **publishable** key. Never put a service role or secret key in the app.
+2. In Supabase **Authentication → Email Templates → Magic Link**, change the message body to include `{{ .Token }}` so DIAR receives a six digit code. Keep email confirmation enabled. Configure production SMTP before public release.
+3. Run `npm ci` and `npm start`. Scan the QR code with Expo Go, or use `npm run android` / `npm run ios` for a simulator. Biometric unlock needs enrolled device biometrics; Face ID requires a development or release build.
+4. Deploy the account deletion Edge Function with `npx supabase functions deploy delete-account --no-verify-jwt --project-ref YOUR_PROJECT_REF`. The function authenticates each deletion request itself. The public URL `https://YOUR_PROJECT_REF.supabase.co/functions/v1/delete-account` is the web deletion link for the Play listing.
 
-Scan the QR code with Expo Go, or use `npm run android` / `npm run ios` for a simulator. Biometric unlock needs enrolled device biometrics. Face ID needs a development or release build rather than Expo Go.
+Run `npm run icons` to regenerate app icons from `scripts/generate-icons.cjs`.
 
-Run `npm run icons` to regenerate the app icons from `scripts/generate-icons.cjs`.
+## Data and account behavior
 
-## What is stored
+Each date has independent writing in What's Going On, Positive Things, and Manifestation. Changes are saved after a short delay and when leaving the diary. The PIN verifier and a random encryption key are stored in Expo SecureStore. Diary entries are saved as an XChaCha20-Poly1305 encrypted file in the app's private document directory, with a previous encrypted copy for recovery.
 
-Each date has independent writing in What's Going On, Positive Things, and Manifestation. The app creates an empty dated entry when a day is opened. Changes are held in memory immediately, saved after a short delay, and flushed on navigation or when the app leaves the foreground.
+Supabase stores email identity and session information. The account ID is bound to the local diary to prevent a second account from opening it. Signing out keeps the local diary and requires the same account to sign back in. Users can export an encrypted backup, erase their diary, or delete their account and local diary from Settings. The account deletion web page can delete the remote account after an emailed code; local data on other devices must be removed on those devices.
 
-The PIN is never stored as text. A random salt and PBKDF2-SHA-256 verifier are stored in Expo SecureStore, which uses Android Keystore backed storage and iOS Keychain. A separate random 256-bit key is stored there for encryption. Diary entries are saved as an XChaCha20-Poly1305 encrypted file in the app's private document directory; a previous encrypted copy is kept for recovery. The PIN is an app lock. Device storage protection and the device passcode remain important because the encryption key is accessible to the app through secure storage.
+The encrypted export uses a separate passphrase-derived key. DIAR cannot recover a forgotten passphrase. Import replaces the local diary after confirmation. Android automatic app backup is disabled. There are no analytics or ad SDKs.
 
-The encrypted export uses a separate passphrase-derived key. Keep your passphrase: DIAR cannot recover it. Import replaces the local diary only after a confirmation. Android automatic app backup is disabled. There are no accounts, analytics, ads, or backend requests.
+## Release
 
-## Structure
+See [Play release setup](docs/PLAY_RELEASE.md). Production builds use an upload signing key managed by EAS and produce an `.aab` for Play Console. The older APK artifact was a debug-signed preview and must not be submitted to Play. Release builds require the Supabase Project URL and publishable key and fail when they are missing.
 
-- `App.tsx`: session state, save scheduling, app lifecycle, import/export.
-- `src/screens`: welcome, PIN, diary, and settings screens.
-- `src/components`: tabs, calendar, writing editor, gratitude points, keypad.
-- `src/storage`: secure settings, encryption, encrypted file persistence.
-- `src/models` and `src/utils`: diary shape and date helpers.
+## Checks
 
-## Testing and limitations
-
-Run `npx tsc --noEmit` and `npx expo export --platform android` to verify the TypeScript and bundle. Device checks should cover setup, incorrect PIN, restart, date switching, autosave, biometrics, appearance, and backup round trip. Cloud sync and attachments are intentionally out of scope for this local-first version.
+Run `npx tsc --noEmit`, `npx expo export --platform android`, and `npm run check:release` with the production environment variables. Device checks should cover email sign in, PIN setup and unlock, account switching protection, restart, date switching, autosave, biometrics, appearance, backup round trip, and deletion. The account and deletion service cannot be tested end to end until a Supabase project is connected.

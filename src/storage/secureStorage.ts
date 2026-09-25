@@ -5,6 +5,7 @@ const PIN_KEY = 'diar.pin.v1';
 const DATA_KEY = 'diar.data-key.v1';
 const THEME_KEY = 'diar.theme.v1';
 const BIOMETRIC_KEY = 'diar.biometric.v1';
+const ACCOUNT_KEY = 'diar.account-id.v1';
 const OPTIONS = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
 
 type PinRecord = { length: 4 | 6; salt: string; verifier: string };
@@ -67,4 +68,18 @@ export async function removeSecurity(): Promise<void> {
   await SecureStore.deleteItemAsync(PIN_KEY);
   await SecureStore.deleteItemAsync(DATA_KEY);
   await SecureStore.deleteItemAsync(BIOMETRIC_KEY);
+}
+
+export async function getBoundAccountId(): Promise<string | null> {
+  return SecureStore.getItemAsync(ACCOUNT_KEY);
+}
+
+export async function bindAccountId(id: string): Promise<void> {
+  const current = await getBoundAccountId();
+  if (current && current !== id) throw new Error('This device contains a diary linked to another account.');
+  if (!current) await SecureStore.setItemAsync(ACCOUNT_KEY, id, OPTIONS);
+}
+
+export async function clearBoundAccountId(): Promise<void> {
+  await SecureStore.deleteItemAsync(ACCOUNT_KEY);
 }

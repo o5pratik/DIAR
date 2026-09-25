@@ -51,6 +51,11 @@ export async function deleteDiary(): Promise<void> {
   activeKey = null;
 }
 
+export function releaseDiaryKey(): void {
+  activeKey?.fill(0);
+  activeKey = null;
+}
+
 export function createPortableBackup(diary: Diary, passphrase: string): string {
   if (passphrase.length < 8) throw new Error('Use at least 8 characters for the backup passphrase');
   const salt = randomBase64(16);

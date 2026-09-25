@@ -11,12 +11,15 @@ import { DiaryScreen } from './src/screens/DiaryScreen';
 import { PinScreen } from './src/screens/PinScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
-import { createPortableBackup, deleteDiary, loadDiary, readPortableBackup, saveDiary } from './src/storage/diaryStorage';
-import { createDataKey, getBiometricPreference, getPinLength, getThemePreference, removeSecurity, setBiometricPreference, setPin, setThemePreference, verifyPin } from './src/storage/secureStorage';
+import { createPortableBackup, deleteDiary, loadDiary, readPortableBackup, releaseDiaryKey, saveDiary } from './src/storage/diaryStorage';
+import { bindAccountId, clearBoundAccountId, createDataKey, getBiometricPreference, getBoundAccountId, getPinLength, getThemePreference, removeSecurity, setBiometricPreference, setPin, setThemePreference, verifyPin } from './src/storage/secureStorage';
+import { supabase } from './src/auth/supabase';
+import { AccountScreen } from './src/screens/AccountScreen';
+import { AccountMismatchScreen } from './src/screens/AccountMismatchScreen';
 import { makeTheme, ThemePreference } from './src/theme/theme';
 import { dateKey } from './src/utils/dateUtils';
 
-type Phase = 'loading' | 'welcome' | 'setup' | 'unlock' | 'ready' | 'error';
+type Phase = 'loading' | 'account' | 'account-mismatch' | 'welcome' | 'setup' | 'unlock' | 'ready' | 'error';
 
 export default function App() {
   const systemScheme = useColorScheme();
@@ -33,12 +36,25 @@ export default function App() {
   const [changingPin, setChangingPin] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   const [bootError, setBootError] = useState('');
+  const [accountEmail, setAccountEmail] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revision = useRef(0);
+  const saveTail = useRef<Promise<void>>(Promise.resolve());
+  const phaseRef = useRef<Phase>('loading');
+  const accountChangeRef = useRef(false);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   const boot = useCallback(async () => {
     setPhase('loading');
     try {
+      if (!supabase) { setPhase('account'); return; }
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session) { setAccountEmail(''); setPhase('account'); return; }
+      setAccountEmail(session.user.email ?? '');
+      const owner = await getBoundAccountId();
+      if (owner && owner !== session.user.id) { setPhase('account-mismatch'); return; }
+      await bindAccountId(session.user.id);
       const [length, appearance, biometric, hardware, enrolled] = await Promise.all([
         getPinLength(), getThemePreference(), getBiometricPreference(),
         LocalAuthentication.hasHardwareAsync(), LocalAuthentication.isEnrolledAsync(),
@@ -55,6 +71,25 @@ export default function App() {
   }, []);
   useEffect(() => { void boot(); }, [boot]);
 
+  function forgetOpenDiary() {
+    diaryRef.current = {};
+    setDiary({});
+    releaseDiaryKey();
+    setScreen('diary');
+  }
+
+  useEffect(() => {
+    if (!supabase) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
+      if (event === 'SIGNED_OUT' && !accountChangeRef.current) {
+        setPhase('account');
+        if (phaseRef.current === 'ready') void flush().finally(() => forgetOpenDiary());
+        else forgetOpenDiary();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   function updateEntry(entry: DiaryEntry) {
     const next = { ...diaryRef.current, [entry.date]: entry };
     diaryRef.current = next;
@@ -65,14 +100,19 @@ export default function App() {
     timer.current = setTimeout(() => { void flush(); }, 350);
   }
 
-  async function flush() {
+  async function flush(): Promise<boolean> {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
     const writingRevision = revision.current;
+    const snapshot = diaryRef.current;
+    const write = saveTail.current.then(() => saveDiary(snapshot));
+    saveTail.current = write.catch(() => {});
     try {
-      await saveDiary(diaryRef.current);
+      await write;
       if (revision.current === writingRevision) setSaveStatus('saved');
+      return true;
     } catch {
       setSaveStatus('error');
+      return false;
     }
   }
 
@@ -174,17 +214,54 @@ export default function App() {
     setPhase('welcome');
   }
 
+  async function signOut() {
+    if (phaseRef.current === 'ready' && !(await flush())) throw new Error('Your diary could not be saved. Try again before signing out.');
+    accountChangeRef.current = true;
+    try {
+      const { error } = await supabase!.auth.signOut({ scope: 'local' });
+      if (error) throw error;
+      forgetOpenDiary();
+      setAccountEmail('');
+      setPhase('account');
+    } finally { accountChangeRef.current = false; }
+  }
+
+  async function eraseLocalForNewAccount() {
+    await deleteDiary();
+    await removeSecurity();
+    await clearBoundAccountId();
+    forgetOpenDiary();
+    await boot();
+  }
+
+  async function deleteAccount() {
+    if (!(await flush())) throw new Error('Your diary could not be saved. Try again before deleting your account.');
+    const { error } = await supabase!.functions.invoke('delete-account', { body: { action: 'delete-session' } });
+    if (error) throw new Error('Could not delete your account. Please try again.');
+    await deleteDiary();
+    await removeSecurity();
+    await clearBoundAccountId();
+    accountChangeRef.current = true;
+    try { await supabase!.auth.signOut({ scope: 'local' }); }
+    finally { accountChangeRef.current = false; }
+    forgetOpenDiary();
+    setAccountEmail('');
+    setPhase('account');
+  }
+
   const common = <StatusBar style={theme.dark ? 'light' : 'dark'} />;
   if (phase === 'loading') return <SafeAreaProvider><View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center' }}><ActivityIndicator color={theme.accent} /></View>{common}</SafeAreaProvider>;
   if (phase === 'error') return <SafeAreaProvider><View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', padding: 30 }}><Text style={{ color: theme.ink, fontSize: 22, textAlign: 'center' }}>{bootError}</Text><Pressable onPress={() => void boot()} style={{ padding: 16, alignSelf: 'center' }}><Text style={{ color: theme.accent }}>Try again</Text></Pressable></View>{common}</SafeAreaProvider>;
 
   return <SafeAreaProvider>
+    {phase === 'account' && <AccountScreen theme={theme} onSignedIn={boot} />}
+    {phase === 'account-mismatch' && <AccountMismatchScreen theme={theme} email={accountEmail} onSignOut={signOut} onErase={eraseLocalForNewAccount} />}
     {phase === 'welcome' && <WelcomeScreen theme={theme} onContinue={() => setPhase('setup')} />}
     {phase === 'setup' && <PinScreen kind="setup" theme={theme} onSet={async pin => { await createDataKey(); await setPin(pin); setPinLength(pin.length as 4 | 6); await activateDiary(); }} />}
     {phase === 'unlock' && <PinScreen kind="unlock" length={pinLength} theme={theme} onVerify={verifyPin} onUnlocked={activateDiary} onBiometric={biometricEnabled && biometricAvailable ? biometricUnlock : undefined} />}
     {phase === 'ready' && changingPin && <PinScreen kind="change" length={pinLength} theme={theme} onVerify={verifyPin} onSet={async pin => { await setPin(pin); setPinLength(pin.length as 4 | 6); setChangingPin(false); }} onCancel={() => setChangingPin(false)} />}
     {phase === 'ready' && !changingPin && screen === 'diary' && <DiaryScreen diary={diary} date={date} onDate={selectDate} onUpdate={updateEntry} onSave={() => void flush()} saveStatus={saveStatus} onSettings={() => { void flush(); setScreen('settings'); }} theme={theme} />}
-    {phase === 'ready' && !changingPin && screen === 'settings' && <SettingsScreen theme={theme} preference={preference} onPreference={chooseTheme} biometricAvailable={biometricAvailable} biometricEnabled={biometricEnabled} onBiometric={toggleBiometric} onBack={() => setScreen('diary')} onChangePin={() => setChangingPin(true)} onLock={lock} onExport={exportBackup} onImport={importBackup} onDelete={deleteEverything} />}
+    {phase === 'ready' && !changingPin && screen === 'settings' && <SettingsScreen theme={theme} preference={preference} onPreference={chooseTheme} biometricAvailable={biometricAvailable} biometricEnabled={biometricEnabled} onBiometric={toggleBiometric} onBack={() => setScreen('diary')} onChangePin={() => setChangingPin(true)} onLock={lock} onExport={exportBackup} onImport={importBackup} onDelete={deleteEverything} accountEmail={accountEmail} onSignOut={signOut} onDeleteAccount={deleteAccount} />}
     {common}
   </SafeAreaProvider>;
 }

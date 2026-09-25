@@ -39,3 +39,12 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+# Local account configuration and signing material
+.env
+.env.*
+!.env.example
+credentials/
+*.keystore
+*.aab
+/artifacts/*.apk
+/artifacts/apk-launch.png
