@@ -10,6 +10,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # These are Supabase client credentials embedded in every app build.
+      EXPO_PUBLIC_SUPABASE_URL: https://qtudcokmkwriylfsiqcm.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_MrMi2mMR3NICMF7hG-RCLA_VHyHJxgi
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,22 +25,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - run: npm ci
-      - name: Require Supabase configuration
-        env:
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-        run: |
-          test -n "$EXPO_PUBLIC_SUPABASE_URL"
-          test -n "$EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
       - run: npx expo prebuild --platform android --no-install
-        env:
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       - run: ./gradlew :app:assembleRelease --no-daemon
         working-directory: android
-        env:
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/upload-artifact@v4
         with:
           name: DIAR-android-apk
