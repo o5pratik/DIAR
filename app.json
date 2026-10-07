@@ -2,7 +2,6 @@
   "expo": {
     "name": "DIAR",
     "slug": "diar",
-    "scheme": "com.diar.privatejournal",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decode, deriveKey, encode, equalBytes, randomBase64 } from './crypto';
 
 const PIN_KEY = 'diar.pin.v1';
@@ -6,6 +7,7 @@ const DATA_KEY = 'diar.data-key.v1';
 const THEME_KEY = 'diar.theme.v1';
 const BIOMETRIC_KEY = 'diar.biometric.v1';
 const ACCOUNT_KEY = 'diar.account-id.v1';
+const LOCAL_MODE_KEY = 'diar.local-mode.v1';
 const OPTIONS = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
 
 type PinRecord = { length: 4 | 6; salt: string; verifier: string };
@@ -70,16 +72,10 @@ export async function removeSecurity(): Promise<void> {
   await SecureStore.deleteItemAsync(BIOMETRIC_KEY);
 }
 
-export async function getBoundAccountId(): Promise<string | null> {
-  return SecureStore.getItemAsync(ACCOUNT_KEY);
-}
-
-export async function bindAccountId(id: string): Promise<void> {
-  const current = await getBoundAccountId();
-  if (current && current !== id) throw new Error('This device contains a diary linked to another account.');
-  if (!current) await SecureStore.setItemAsync(ACCOUNT_KEY, id, OPTIONS);
-}
-
-export async function clearBoundAccountId(): Promise<void> {
-  await SecureStore.deleteItemAsync(ACCOUNT_KEY);
+export async function clearLegacyAccount(): Promise<void> {
+  await Promise.allSettled([
+    SecureStore.deleteItemAsync(ACCOUNT_KEY),
+    SecureStore.deleteItemAsync(LOCAL_MODE_KEY),
+    AsyncStorage.removeItem('sb-qtudcokmkwriylfsiqcm-auth-token'),
+  ]);
 }

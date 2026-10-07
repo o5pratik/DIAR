@@ -1,15 +1,11 @@
 # DIAR privacy policy draft
 
-**Publisher and contact:** [Add legal publisher name and support email before publishing.]
+**Publisher and contact:** [Add publisher name and support email before using this for a store listing.]
 
-**Effective date:** [Add release date.]
+**Effective date:** [Add publication date.]
 
-DIAR is a free diary app. We use Supabase Auth to create and maintain an account identified by your email address. Signing in sends a one time link to that address. Supabase processes the email, authentication session, and technical request information needed to provide this service. DIAR does not sell personal data or include ads or analytics SDKs.
+DIAR is a free diary app. It does not require an account or email address and has no ads or analytics SDKs. Diary entries and the PIN are stored on your device. Entries are encrypted in private app storage with a key held in device secure storage. DIAR does not upload entries or the encryption key to a server.
 
-Your diary entries and PIN remain on your device. Entries are encrypted in app storage with a key held by the device's secure storage. We do not upload entries or the encryption key to Supabase. If you export a backup, you choose where to save or share that encrypted file; DIAR does not receive it. A backup passphrase cannot be recovered by us.
+You can export an encrypted backup and choose where to save or share it. DIAR does not receive that file. You need its passphrase to import it; the publisher cannot recover the passphrase or your diary. You can delete diary data and security settings in the app's Settings screen, or uninstall the app to remove its private local data. Backups saved elsewhere must be deleted separately.
 
-You can sign out without deleting the diary on your device. In Settings you can delete local diary data, or delete your DIAR account together with the local diary. You can also request remote account deletion at https://qtudcokmkwriylfsiqcm.supabase.co/functions/v1/delete-account after the deletion page is deployed. If you delete the account through the web page, remove DIAR from each device or delete local data in the app to remove the copies stored there.
-
-We retain account information while the account exists and delete it when your deletion request completes, subject to any legal obligations that apply to the publisher. Backups you saved outside DIAR are controlled by the location where you saved them. Contact [support email] about privacy questions.
-
-Before publication, review this text against the actual Supabase configuration, host it at a public HTTPS URL, and use that URL in the Play Console privacy policy field.
+Contact [support email] with privacy questions. Before a Play Store release, verify this draft against the final build, add publisher contact details, and host it at a public HTTPS address.

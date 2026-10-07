@@ -42,9 +42,10 @@ yarn-error.*
 # Local account configuration and signing material
 .env
 .env.*
-!.env.example
 credentials/
 *.keystore
 *.aab
 /artifacts/*.apk
 /artifacts/apk-launch.png
+/artifacts/*.zip
+/artifacts/email-link-preview/

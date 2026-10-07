@@ -8,10 +8,9 @@ type Props = {
   biometricAvailable: boolean; biometricEnabled: boolean; onBiometric: (value: boolean) => Promise<void>;
   onBack: () => void; onChangePin: () => void; onLock: () => void;
   onExport: (passphrase: string) => Promise<void>; onImport: (passphrase: string) => Promise<void>; onDelete: () => Promise<void>;
-  accountEmail: string; onSignOut: () => Promise<void>; onDeleteAccount: () => Promise<void>;
 };
 
-export function SettingsScreen({ theme, preference, onPreference, biometricAvailable, biometricEnabled, onBiometric, onBack, onChangePin, onLock, onExport, onImport, onDelete, accountEmail, onSignOut, onDeleteAccount }: Props) {
+export function SettingsScreen({ theme, preference, onPreference, biometricAvailable, biometricEnabled, onBiometric, onBack, onChangePin, onLock, onExport, onImport, onDelete }: Props) {
   const [backupMode, setBackupMode] = useState<'export' | 'import' | null>(null);
   const [passphrase, setPassphrase] = useState('');
   const [busy, setBusy] = useState(false);
@@ -33,13 +32,6 @@ export function SettingsScreen({ theme, preference, onPreference, biometricAvail
     Alert.alert('Delete your diary?', 'This will permanently remove every entry and your PIN from this device. This cannot be undone.', [
       { text: 'Keep diary', style: 'cancel' },
       { text: 'Delete everything', style: 'destructive', onPress: () => void onDelete().catch(() => Alert.alert('Could not delete', 'Please try again.')) },
-    ]);
-  }
-
-  function confirmAccountDelete() {
-    Alert.alert('Delete your DIAR account?', 'Your account, diary on this device, and PIN will be permanently deleted. Export an encrypted backup first if you want to keep your writing.', [
-      { text: 'Keep account', style: 'cancel' },
-      { text: 'Delete account and diary', style: 'destructive', onPress: () => void onDeleteAccount().catch(error => Alert.alert('Could not delete account', error instanceof Error ? error.message : 'Please try again.')) },
     ]);
   }
 
@@ -67,13 +59,6 @@ export function SettingsScreen({ theme, preference, onPreference, biometricAvail
         {row('Export encrypted backup', 'Protect a portable copy with a passphrase.', () => { setMessage(''); setBackupMode('export'); })}
         {row('Import backup', 'Replace this diary with an encrypted backup.', () => { setMessage(''); setBackupMode('import'); })}
         {row('Delete all diary data', 'Permanently erase this device’s diary.', confirmDelete, true)}
-      </View>
-
-      <Text style={[styles.groupTitle, { color: theme.accent }]}>ACCOUNT</Text>
-      <View style={[styles.group, { backgroundColor: theme.surface, borderColor: theme.line }]}>
-        <View style={[styles.row, { borderColor: theme.line }]}><View><Text style={{ color: theme.ink, fontSize: 16, fontWeight: '600' }}>Signed in</Text><Text style={{ color: theme.muted, fontSize: 12, marginTop: 4 }}>{accountEmail}</Text></View></View>
-        {row('Sign out', 'Your diary stays on this device and remains linked to this email.', () => void onSignOut().catch(error => Alert.alert('Could not sign out', error instanceof Error ? error.message : 'Please try again.')))}
-        {row('Delete account and local diary', 'Permanently remove your account and this device’s diary.', confirmAccountDelete, true)}
       </View>
 
       <View style={[styles.about, { backgroundColor: theme.accentSoft }]}><Text style={{ color: theme.accent, fontWeight: '800', letterSpacing: 1.5, fontSize: 11 }}>ABOUT DIAR</Text><Text style={[styles.aboutText, { color: theme.ink }]}>A quiet place to put your thoughts.</Text><Text style={{ color: theme.muted, marginTop: 8, lineHeight: 20 }}>Your diary stays on your device. No ads, purchases, or analytics.</Text><Text style={{ color: theme.muted, fontSize: 11, marginTop: 15 }}>Version 1.0.0</Text></View>

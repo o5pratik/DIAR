@@ -1,4 +1,4 @@
-name: Android preview APK
+name: Android release APK
 
 on:
   workflow_dispatch:
@@ -10,10 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      # These are Supabase client credentials embedded in every app build.
-      EXPO_PUBLIC_SUPABASE_URL: https://qtudcokmkwriylfsiqcm.supabase.co
-      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_MrMi2mMR3NICMF7hG-RCLA_VHyHJxgi
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,10 +22,23 @@ jobs:
           java-version: '17'
       - run: npm ci
       - run: npx expo prebuild --platform android --no-install
+      - name: Configure release signing
+        env:
+          DIAR_ANDROID_KEYSTORE_BASE64: ${{ secrets.DIAR_ANDROID_KEYSTORE_BASE64 }}
+          DIAR_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.DIAR_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          test -n "$DIAR_ANDROID_KEYSTORE_BASE64"
+          test -n "$DIAR_ANDROID_KEYSTORE_PASSWORD"
+          printf '%s' "$DIAR_ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/diar-release.jks
+          DIAR_ANDROID_KEYSTORE_PATH="$PWD/android/app/diar-release.jks" node scripts/configure-android-signing.cjs
       - run: ./gradlew :app:assembleRelease --no-daemon
         working-directory: android
+        env:
+          DIAR_ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/app/diar-release.jks
+          DIAR_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.DIAR_ANDROID_KEYSTORE_PASSWORD }}
       - uses: actions/upload-artifact@v4
         with:
           name: DIAR-android-apk
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+          retention-days: 30

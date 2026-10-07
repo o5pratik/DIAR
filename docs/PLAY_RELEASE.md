@@ -1,27 +1,7 @@
-# Google Play release setup
+# Google Play release notes
 
-DIAR is free to download and use. Do not configure Play Billing products for it.
+DIAR is free to download and use. It does not need Play Billing or user accounts.
 
-## 1. Connect Supabase
+The GitHub APK is release signed for direct installation. Keep the original signing keystore and password: updates installed from GitHub need the same certificate. For Google Play, create a signed Android App Bundle (`.aab`) with an upload key, enroll in Play App Signing, and keep the package ID `com.diar.privatejournal`. Increment `android.versionCode` for every Play update. If the Play delivered app uses a different signing certificate from the GitHub APK, users must export an encrypted backup before switching installations and import it afterward.
 
-1. At [Supabase Dashboard](https://supabase.com/dashboard), create or select a project.
-2. Open **Connect** or **Project Settings → API Keys**. Copy the **Project URL** and **publishable key**. Do not use the service role/secret key in the app.
-3. In **Authentication → Providers**, enable Email. In **Authentication → URL Configuration**, allow `com.diar.privatejournal://auth/callback` and `https://qtudcokmkwriylfsiqcm.supabase.co/functions/v1/delete-account` as redirect URLs. The default Magic Link template works. Set up production SMTP and verify a real sign in before public release.
-4. Put the two values in `.env.local` for local testing. Configure the same names in the EAS **production** environment for cloud builds: `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-5. Deploy `supabase/functions/delete-account` with JWT verification disabled as shown in the README. The function checks the user's bearer token for in-app deletion, or an emailed link for web deletion. Test both paths before submitting the app.
-
-## 2. Make a signed Android App Bundle
-
-1. Create an Expo account and run `npx eas-cli login` and `npx eas-cli init` in this project.
-2. Set the two `EXPO_PUBLIC_` variables in the EAS **production** environment. They are client-visible values; do not use a service role key.
-3. Run `npm run check:release` locally with the variables set, then `npx eas-cli build --platform android --profile production`.
-4. When prompted, let EAS create and retain the Android upload keystore. Back up the upload credentials securely from the EAS credentials dashboard. Keep the package ID `com.diar.privatejournal` and increment `android.versionCode` for each later Play upload.
-5. Download the resulting signed `.aab`. An AAB is for Play Console; it is not directly installed on an emulator. Use an internal testing release to install the Play-generated APKs.
-
-The earlier downloadable APK was signed with a debug key. It cannot be upgraded in place to the Play-signed app. Anyone who wrote in that preview should export an encrypted backup and keep the passphrase before uninstalling it, then import the backup into the Play-installed app.
-
-## 3. Finish Play Console setup
-
-Create a Google Play Console developer account and a **free** app. Upload the signed AAB to internal testing first. Complete the store listing, screenshots, content rating, Data safety form, and a hosted privacy policy. For account deletion, provide the deployed web deletion URL from step 1 and verify the in-app deletion path. Test sign in, account deletion, encrypted diary, backup, and restore on a Play-installed build before production rollout.
-
-The Project URL and publishable key, Expo account, Play Console account, production SMTP, and published privacy policy are external setup that this repository cannot provide by itself. Until they are connected and tested, no build should be described as ready for public release.
+Create a Google Play Console developer account, then use internal testing before production. Complete the store listing, screenshots, content rating, Data safety form, and a hosted privacy policy with a real publisher contact. Test installation, PIN setup/unlock, encrypted storage, backup round trip, and deletion on a Play installed build. An `.aab` is uploaded to Play; it is not installed directly on phones.

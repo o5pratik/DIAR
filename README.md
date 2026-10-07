@@ -1,30 +1,25 @@
 # DIAR
 
-DIAR is a free, private diary for Android and iOS, built with Expo and React Native. An email link signs the user in. Diary entries remain encrypted on the device and are never uploaded to Supabase. There are no ads, subscriptions, or purchases.
+DIAR is a free, private diary for Android. No account, email, subscription, purchase, or internet connection is needed. The source also supports iOS builds, but an iOS installation package is not available yet.
 
-## Run locally
+## Download for Android
 
-Requires Node.js 22.13 or newer, a Supabase project, and an Android/iOS development or release build for email link testing.
+Download **DIAR.apk** from the [latest GitHub Release](https://github.com/o5pratik/DIAR/releases/latest). Open the APK on your Android phone and allow your browser or file manager to install apps when Android asks. Open DIAR, tap **Create my private diary**, and choose a 4 or 6 digit PIN. You can then write immediately.
 
-1. Copy `.env.example` to `.env.local`. Fill in the Supabase Project URL and **publishable** key. Never put a service role or secret key in the app.
-2. In Supabase **Authentication → URL Configuration**, add `com.diar.privatejournal://auth/callback` and `https://qtudcokmkwriylfsiqcm.supabase.co/functions/v1/delete-account` to **Redirect URLs**. Keep Email sign in enabled. The default Magic Link email template works; it does not need custom SMTP. Configure production SMTP before public release.
-3. Run `npm ci` and `npm run android` / `npm run ios` for a simulator, or install a standalone preview build. Open the sign in link on the same device as DIAR. Expo Go can show the UI, but its changing URL is unsuitable for this email callback. Biometric unlock needs enrolled device biometrics.
-4. Deploy the account deletion Edge Function with `npx supabase functions deploy delete-account --no-verify-jwt --project-ref qtudcokmkwriylfsiqcm`. Alternatively, add a Supabase personal access token as the private GitHub repository secret `SUPABASE_ACCESS_TOKEN`, then run the **Deploy account deletion page** workflow. Never commit or paste that token into the app. The function authenticates each deletion request itself. The public URL `https://qtudcokmkwriylfsiqcm.supabase.co/functions/v1/delete-account` is the web deletion link for the Play listing.
+DIAR saves entries only on your device. Export an encrypted backup from Settings before changing phones, uninstalling, or clearing app data. Keep its passphrase: there is no account recovery or cloud copy. An older preview APK used a different signing key. Export a backup from that preview before uninstalling it, then import the backup into this release.
 
-Run `npm run icons` to regenerate app icons from `scripts/generate-icons.cjs`.
+## Run from source
 
-## Data and account behavior
+Install Node.js 22.13 or newer and an Android or iOS development environment. Run `npm ci`, then `npm run android` or `npm run ios`. Run `npm run icons` to regenerate app icons.
 
-Each date has independent writing in What's Going On, Positive Things, and Manifestation. Changes are saved after a short delay and when leaving the diary. The PIN verifier and a random encryption key are stored in Expo SecureStore. Diary entries are saved as an XChaCha20-Poly1305 encrypted file in the app's private document directory, with a previous encrypted copy for recovery.
+## Privacy and storage
 
-Supabase stores email identity and session information. The account ID is bound to the local diary to prevent a second account from opening it. Signing out keeps the local diary and requires the same account to sign back in. Users can export an encrypted backup, erase their diary, or delete their account and local diary from Settings. The account deletion web page can delete the remote account after an emailed link; local data on other devices must be removed on those devices.
+Each date has separate fields for What's Going On, Positive Things, and Manifestation. Entries are encrypted with XChaCha20-Poly1305 in the app's private storage. The random encryption key and PIN verifier are held in device secure storage. Android automatic app backup is disabled. Optional biometric unlock, appearance settings, an encrypted export/import, and local data deletion are available in Settings. DIAR has no analytics or ad SDKs.
 
-The encrypted export uses a separate passphrase-derived key. DIAR cannot recover a forgotten passphrase. Import replaces the local diary after confirmation. Android automatic app backup is disabled. There are no analytics or ad SDKs.
+An exported backup is encrypted with a separate passphrase-derived key and saved wherever you choose. Import replaces the local diary after confirmation. Neither a forgotten PIN nor a forgotten backup passphrase can be recovered by the publisher.
 
-## Release
+## Build and release
 
-See [Play release setup](docs/PLAY_RELEASE.md). Production builds use an upload signing key managed by EAS and produce an `.aab` for Play Console. The older APK artifact was a debug-signed preview and must not be submitted to Play. Release builds require the Supabase Project URL and publishable key and fail when they are missing.
+The [Android release workflow](.github/workflows/android-apk.yml) creates a release-signed APK using private GitHub Actions signing secrets. Keep the keystore and password secure: Android updates require the same signing certificate. See [Play release notes](docs/PLAY_RELEASE.md) for a later Google Play build.
 
-## Checks
-
-Run `npx tsc --noEmit`, `npx expo export --platform android`, and `npm run check:release` with the production environment variables. Device checks should cover email sign in, PIN setup and unlock, account switching protection, restart, date switching, autosave, biometrics, appearance, backup round trip, and deletion. The account and deletion service cannot be tested end to end until a Supabase project is connected.
+Run `npx tsc --noEmit` and `npx expo export --platform android` to check the JavaScript build. Before sharing a new APK, test PIN setup/unlock, restart, date switching, autosave, biometrics where available, backup export/import, and data deletion on a device.
