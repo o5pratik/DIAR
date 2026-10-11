@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DateSelector } from '../components/DateSelector';
@@ -16,6 +16,8 @@ type Props = {
 };
 
 export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus, onSettings, theme }: Props) {
+  const scrollRef = useRef<ScrollView>(null);
+  const focusedInput = useRef<number | null>(null);
   const [tab, setTab] = useState<Tab>('whatsGoingOn');
   const [searchOpen, setSearchOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -36,6 +38,20 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
       return matches;
     });
   }, [query, history]);
+  function scrollFocusedInput() {
+    if (focusedInput.current !== null) {
+      scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard(focusedInput.current, 24, true);
+    }
+  }
+  useEffect(() => {
+    const listener = Keyboard.addListener('keyboardDidShow', scrollFocusedInput);
+    return () => listener.remove();
+  }, []);
+  function focusInput(node: number) {
+    focusedInput.current = node;
+    requestAnimationFrame(scrollFocusedInput);
+  }
+  function blurInput() { focusedInput.current = null; }
   function change(field: 'whatsGoingOn' | 'manifestation', value: string) { onUpdate({ ...entry, [field]: value, updatedAt: new Date().toISOString() }); }
   function changePoints(points: string[]) { onUpdate({ ...entry, positiveThings: points, updatedAt: new Date().toISOString() }); }
   function switchTab(next: Tab) { Keyboard.dismiss(); onSave(); setTab(next); }
@@ -52,19 +68,19 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
     </View>
     <DateSelector date={date} onChange={selectDate} marked={marked} theme={theme} />
     <TopTabs active={tab} onChange={switchTab} theme={theme} />
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <ScrollView key={`${date}:${tab}`} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <ScrollView ref={scrollRef} key={`${date}:${tab}`} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
       <Text style={[styles.eyebrow, { color: theme.accent }]}>{today ? 'TODAY’S PAGE' : 'A PAGE FROM YOUR DIARY'}</Text>
       {tab === 'whatsGoingOn' && <>
         <Text style={[styles.title, { color: theme.ink }]}>What’s going on?</Text>
         <Text style={[styles.prompt, { color: theme.muted }]}>How was your day? Take your time.</Text>
-        <DiaryEditor value={entry.whatsGoingOn} onChange={value => change('whatsGoingOn', value)} placeholder="What’s on your mind today?" theme={theme} />
+        <DiaryEditor value={entry.whatsGoingOn} onChange={value => change('whatsGoingOn', value)} onFocus={focusInput} onBlur={blurInput} placeholder="What’s on your mind today?" theme={theme} />
       </>}
       {tab === 'positiveThings' && <>
         <Text style={[styles.title, { color: theme.ink }]}>Positive things</Text>
         <Text style={[styles.prompt, { color: theme.muted }]}>Find three little things that made today better.</Text>
         {entry.positiveThings.length === 0 && <View style={[styles.empty, { backgroundColor: theme.accentSoft }]}><Text style={{ fontSize: 27 }}>☀</Text><Text style={[styles.emptyText, { color: theme.accent }]}>What are you grateful for today?</Text></View>}
-        {entry.positiveThings.map((point, i) => <PositiveThingItem key={`${date}:${i}`} index={i} value={point} theme={theme}
+        {entry.positiveThings.map((point, i) => <PositiveThingItem key={`${date}:${i}`} index={i} value={point} theme={theme} onFocus={focusInput} onBlur={blurInput}
           onChange={value => changePoints(entry.positiveThings.map((p, j) => j === i ? value : p))}
           onDelete={() => changePoints(entry.positiveThings.filter((_, j) => j !== i))}
           onMoveUp={i > 0 ? () => { const items = [...entry.positiveThings]; [items[i - 1], items[i]] = [items[i], items[i - 1]]; changePoints(items); } : undefined}
@@ -74,7 +90,7 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
       {tab === 'manifestation' && <>
         <Text style={[styles.title, { color: theme.ink }]}>Manifestation</Text>
         <Text style={[styles.prompt, { color: theme.muted }]}>Write the future you want to create.</Text>
-        <DiaryEditor value={entry.manifestation} onChange={value => change('manifestation', value)} placeholder="What are you becoming?" theme={theme} />
+        <DiaryEditor value={entry.manifestation} onChange={value => change('manifestation', value)} onFocus={focusInput} onBlur={blurInput} placeholder="What are you becoming?" theme={theme} />
         <View style={[styles.affirmation, { backgroundColor: theme.accentSoft }]}><Text style={{ color: theme.accent, fontSize: 12, fontWeight: '700', letterSpacing: 1 }}>TODAY’S AFFIRMATION</Text><Text style={[styles.quote, { color: theme.ink }]}>“I am becoming the person I want to be.”</Text></View>
       </>}
       <View style={styles.footer}><Text style={{ color: saveStatus === 'error' ? theme.danger : theme.muted, fontSize: 12 }}>{saveStatus === 'saved' ? '✓ Saved on this device' : saveStatus === 'saving' ? 'Saving…' : 'Couldn’t save. Try again.'}</Text><Pressable onPress={onSave} style={[styles.saveButton, { backgroundColor: theme.accent }]}><Text style={{ color: theme.surface, fontWeight: '700' }}>Save now</Text></Pressable></View>
