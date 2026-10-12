@@ -18,6 +18,7 @@ type Props = {
 export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus, onSettings, theme }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const editorRef = useRef<TextInput>(null);
+  const editorFocusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const focusedInput = useRef<number | null>(null);
   const [tab, setTab] = useState<Tab>('whatsGoingOn');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -55,7 +56,11 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
   }
   function blurInput() { focusedInput.current = null; }
   function change(field: 'whatsGoingOn' | 'manifestation', value: string) { onUpdate({ ...entry, [field]: value, updatedAt: new Date().toISOString() }); }
-  function finishWriting() { Keyboard.dismiss(); setEditingField(null); onSave(); }
+  function finishWriting() { if (editorFocusTimer.current) clearTimeout(editorFocusTimer.current); Keyboard.dismiss(); setEditingField(null); onSave(); }
+  function focusEditorAfterOpen() {
+    editorRef.current?.blur();
+    editorFocusTimer.current = setTimeout(() => editorRef.current?.focus(), 350);
+  }
   function changePoints(points: string[]) { onUpdate({ ...entry, positiveThings: points, updatedAt: new Date().toISOString() }); }
   function switchTab(next: Tab) { Keyboard.dismiss(); onSave(); setTab(next); }
   function selectDate(next: string) { Keyboard.dismiss(); onSave(); onDate(next); }
@@ -100,7 +105,7 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
       <Text style={[styles.privacy, { color: theme.muted }]}>Your diary stays on your device.</Text>
     </ScrollView>
     </KeyboardAvoidingView>
-    <Modal visible={editingField !== null} animationType="slide" onShow={() => editorRef.current?.focus()} onRequestClose={finishWriting}>
+    <Modal visible={editingField !== null} animationType="slide" onShow={focusEditorAfterOpen} onRequestClose={finishWriting}>
       <SafeAreaView style={[styles.modalPage, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
         <KeyboardAvoidingView style={styles.writingLayout} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.writingHeader, { borderBottomColor: theme.line }]}>
