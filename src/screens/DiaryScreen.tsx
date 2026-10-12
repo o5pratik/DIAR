@@ -17,6 +17,7 @@ type Props = {
 
 export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus, onSettings, theme }: Props) {
   const scrollRef = useRef<ScrollView>(null);
+  const editorRef = useRef<TextInput>(null);
   const focusedInput = useRef<number | null>(null);
   const [tab, setTab] = useState<Tab>('whatsGoingOn');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -99,7 +100,7 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
       <Text style={[styles.privacy, { color: theme.muted }]}>Your diary stays on your device.</Text>
     </ScrollView>
     </KeyboardAvoidingView>
-    <Modal visible={editingField !== null} animationType="slide" onRequestClose={finishWriting}>
+    <Modal visible={editingField !== null} animationType="slide" onShow={() => editorRef.current?.focus()} onRequestClose={finishWriting}>
       <SafeAreaView style={[styles.modalPage, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
         <KeyboardAvoidingView style={styles.writingLayout} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.writingHeader, { borderBottomColor: theme.line }]}>
@@ -110,7 +111,7 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
             <Pressable onPress={finishWriting} accessibilityLabel="Done writing" style={[styles.doneButton, { backgroundColor: theme.accent }]}><Text style={{ color: theme.surface, fontWeight: '700' }}>Done</Text></Pressable>
           </View>
           <TextInput
-            autoFocus multiline scrollEnabled textAlignVertical="top" autoCorrect autoCapitalize="sentences"
+            ref={editorRef} multiline scrollEnabled textAlignVertical="top" autoCorrect autoCapitalize="sentences"
             value={editingField ? entry[editingField] : ''}
             onChangeText={value => { if (editingField) change(editingField, value); }}
             placeholder={editingField === 'manifestation' ? 'What are you becoming?' : 'What’s on your mind today?'}
