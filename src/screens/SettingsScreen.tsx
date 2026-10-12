@@ -61,7 +61,7 @@ export function SettingsScreen({ theme, preference, onPreference, biometricAvail
         {row('Delete all diary data', 'Permanently erase this device’s diary.', confirmDelete, true)}
       </View>
 
-      <View style={[styles.about, { backgroundColor: theme.accentSoft }]}><Text style={{ color: theme.accent, fontWeight: '800', letterSpacing: 1.5, fontSize: 11 }}>ABOUT DIAR</Text><Text style={[styles.aboutText, { color: theme.ink }]}>A quiet place to put your thoughts.</Text><Text style={{ color: theme.muted, marginTop: 8, lineHeight: 20 }}>Your diary stays on your device. No ads, purchases, or analytics.</Text><Text style={{ color: theme.muted, fontSize: 11, marginTop: 15 }}>Version 1.0.1</Text></View>
+      <View style={[styles.about, { backgroundColor: theme.accentSoft }]}><Text style={{ color: theme.accent, fontWeight: '800', letterSpacing: 1.5, fontSize: 11 }}>ABOUT DIAR</Text><Text style={[styles.aboutText, { color: theme.ink }]}>A quiet place to put your thoughts.</Text><Text style={{ color: theme.muted, marginTop: 8, lineHeight: 20 }}>Your diary stays on your device. No ads, purchases, or analytics.</Text><Text style={{ color: theme.muted, fontSize: 11, marginTop: 15 }}>Version 1.0.2</Text></View>
     </ScrollView>
     <Modal visible={backupMode !== null} transparent animationType="fade" onRequestClose={() => { if (!busy) setBackupMode(null); }}>
       <View style={styles.overlay}><View style={[styles.dialog, { backgroundColor: theme.surface }]}>

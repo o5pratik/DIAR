@@ -1,14 +1,16 @@
 import React from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Theme, serif } from '../theme/theme';
 
-export function DiaryEditor({ value, onChange, onFocus, onBlur, placeholder, theme }: { value: string; onChange: (text: string) => void; onFocus: (node: number) => void; onBlur: () => void; placeholder: string; theme: Theme }) {
-  return <View style={[styles.paper, { backgroundColor: theme.surface, borderColor: theme.line }]}>
-    <TextInput multiline value={value} onChangeText={onChange} onFocus={event => onFocus(event.nativeEvent.target)} onBlur={onBlur} placeholder={placeholder} placeholderTextColor={theme.muted} textAlignVertical="top" scrollEnabled autoCorrect autoCapitalize="sentences" style={[styles.input, { color: theme.ink }]} />
-  </View>;
+export function DiaryEditor({ value, onPress, placeholder, theme }: { value: string; onPress: () => void; placeholder: string; theme: Theme }) {
+  return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={value ? 'Edit diary entry' : placeholder} style={[styles.paper, { backgroundColor: theme.surface, borderColor: theme.line }]}>
+    <Text numberOfLines={8} style={[styles.preview, { color: value ? theme.ink : theme.muted }]}>{value || placeholder}</Text>
+    <View style={styles.hintRow}><Text style={{ color: theme.accent, fontSize: 12, fontWeight: '700' }}>Tap to write  ↗</Text></View>
+  </Pressable>;
 }
 
 const styles = StyleSheet.create({
   paper: { borderRadius: 22, borderWidth: 1, padding: 21, minHeight: 295 },
-  input: { fontFamily: serif, fontSize: 17, lineHeight: 28, height: 250 },
+  preview: { fontFamily: serif, fontSize: 17, lineHeight: 28 },
+  hintRow: { marginTop: 'auto', alignItems: 'flex-end', paddingTop: 15 },
 });

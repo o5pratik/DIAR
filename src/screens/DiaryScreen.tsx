@@ -21,6 +21,7 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
   const [tab, setTab] = useState<Tab>('whatsGoingOn');
   const [searchOpen, setSearchOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [editingField, setEditingField] = useState<'whatsGoingOn' | 'manifestation' | null>(null);
   const [query, setQuery] = useState('');
   const entry = diary[date] ?? emptyEntry(date);
   const today = date === dateKey(new Date());
@@ -53,6 +54,7 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
   }
   function blurInput() { focusedInput.current = null; }
   function change(field: 'whatsGoingOn' | 'manifestation', value: string) { onUpdate({ ...entry, [field]: value, updatedAt: new Date().toISOString() }); }
+  function finishWriting() { Keyboard.dismiss(); setEditingField(null); onSave(); }
   function changePoints(points: string[]) { onUpdate({ ...entry, positiveThings: points, updatedAt: new Date().toISOString() }); }
   function switchTab(next: Tab) { Keyboard.dismiss(); onSave(); setTab(next); }
   function selectDate(next: string) { Keyboard.dismiss(); onSave(); onDate(next); }
@@ -74,7 +76,7 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
       {tab === 'whatsGoingOn' && <>
         <Text style={[styles.title, { color: theme.ink }]}>What’s going on?</Text>
         <Text style={[styles.prompt, { color: theme.muted }]}>How was your day? Take your time.</Text>
-        <DiaryEditor value={entry.whatsGoingOn} onChange={value => change('whatsGoingOn', value)} onFocus={focusInput} onBlur={blurInput} placeholder="What’s on your mind today?" theme={theme} />
+        <DiaryEditor value={entry.whatsGoingOn} onPress={() => setEditingField('whatsGoingOn')} placeholder="What’s on your mind today?" theme={theme} />
       </>}
       {tab === 'positiveThings' && <>
         <Text style={[styles.title, { color: theme.ink }]}>Positive things</Text>
@@ -90,13 +92,34 @@ export function DiaryScreen({ diary, date, onDate, onUpdate, onSave, saveStatus,
       {tab === 'manifestation' && <>
         <Text style={[styles.title, { color: theme.ink }]}>Manifestation</Text>
         <Text style={[styles.prompt, { color: theme.muted }]}>Write the future you want to create.</Text>
-        <DiaryEditor value={entry.manifestation} onChange={value => change('manifestation', value)} onFocus={focusInput} onBlur={blurInput} placeholder="What are you becoming?" theme={theme} />
+        <DiaryEditor value={entry.manifestation} onPress={() => setEditingField('manifestation')} placeholder="What are you becoming?" theme={theme} />
         <View style={[styles.affirmation, { backgroundColor: theme.accentSoft }]}><Text style={{ color: theme.accent, fontSize: 12, fontWeight: '700', letterSpacing: 1 }}>TODAY’S AFFIRMATION</Text><Text style={[styles.quote, { color: theme.ink }]}>“I am becoming the person I want to be.”</Text></View>
       </>}
       <View style={styles.footer}><Text style={{ color: saveStatus === 'error' ? theme.danger : theme.muted, fontSize: 12 }}>{saveStatus === 'saved' ? '✓ Saved on this device' : saveStatus === 'saving' ? 'Saving…' : 'Couldn’t save. Try again.'}</Text><Pressable onPress={onSave} style={[styles.saveButton, { backgroundColor: theme.accent }]}><Text style={{ color: theme.surface, fontWeight: '700' }}>Save now</Text></Pressable></View>
       <Text style={[styles.privacy, { color: theme.muted }]}>Your diary stays on your device.</Text>
     </ScrollView>
     </KeyboardAvoidingView>
+    <Modal visible={editingField !== null} animationType="slide" onRequestClose={finishWriting}>
+      <SafeAreaView style={[styles.modalPage, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView style={styles.writingLayout} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={[styles.writingHeader, { borderBottomColor: theme.line }]}>
+            <View style={styles.writingHeading}>
+              <Text style={[styles.writingDate, { color: theme.muted }]}>{prettyDate(date)}</Text>
+              <Text style={[styles.writingTitle, { color: theme.ink }]}>{editingField === 'manifestation' ? 'Manifestation' : 'What’s going on?'}</Text>
+            </View>
+            <Pressable onPress={finishWriting} accessibilityLabel="Done writing" style={[styles.doneButton, { backgroundColor: theme.accent }]}><Text style={{ color: theme.surface, fontWeight: '700' }}>Done</Text></Pressable>
+          </View>
+          <TextInput
+            autoFocus multiline scrollEnabled textAlignVertical="top" autoCorrect autoCapitalize="sentences"
+            value={editingField ? entry[editingField] : ''}
+            onChangeText={value => { if (editingField) change(editingField, value); }}
+            placeholder={editingField === 'manifestation' ? 'What are you becoming?' : 'What’s on your mind today?'}
+            placeholderTextColor={theme.muted}
+            style={[styles.writingInput, { color: theme.ink, backgroundColor: theme.surface }]}
+          />
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Modal>
     <Modal visible={historyOpen} animationType="slide" onRequestClose={() => setHistoryOpen(false)}><SafeAreaView style={[styles.modalPage, { backgroundColor: theme.background }]}>
       <View style={styles.modalHeader}><Text style={[styles.modalTitle, { color: theme.ink }]}>Diary history</Text><Pressable onPress={() => setHistoryOpen(false)}><Text style={{ color: theme.accent, fontSize: 16 }}>Done</Text></Pressable></View>
       <ScrollView contentContainerStyle={{ padding: 20 }}>{history.length === 0 ? <Text style={{ color: theme.muted, textAlign: 'center', marginTop: 50 }}>Your written days will appear here.</Text> : history.map(item => <Pressable key={item.date} onPress={() => { selectDate(item.date); setHistoryOpen(false); }} style={[styles.historyCard, { backgroundColor: theme.surface, borderColor: theme.line }]}><Text style={[styles.historyDate, { color: theme.ink }]}>{prettyDate(item.date)}</Text><Text numberOfLines={2} style={{ color: theme.muted, marginTop: 5, lineHeight: 20 }}>{item.whatsGoingOn || item.positiveThings.find(Boolean) || item.manifestation}</Text></Pressable>)}</ScrollView>
@@ -118,5 +141,8 @@ const styles = StyleSheet.create({
   affirmation: { borderRadius: 17, padding: 20, marginTop: 18 }, quote: { fontFamily: serif, fontSize: 17, lineHeight: 25, marginTop: 8 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 }, saveButton: { borderRadius: 12, paddingHorizontal: 17, paddingVertical: 11 }, privacy: { textAlign: 'center', fontSize: 11, marginTop: 33 },
   modalPage: { flex: 1 }, modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 }, modalTitle: { fontFamily: serif, fontSize: 25 },
+  writingLayout: { flex: 1 }, writingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1 },
+  writingHeading: { flex: 1, paddingRight: 12 }, writingDate: { fontSize: 12, marginBottom: 3 }, writingTitle: { fontFamily: serif, fontSize: 23 },
+  doneButton: { borderRadius: 11, paddingHorizontal: 17, paddingVertical: 11 }, writingInput: { flex: 1, fontFamily: serif, fontSize: 18, lineHeight: 29, paddingHorizontal: 22, paddingTop: 22, paddingBottom: 28 },
   historyCard: { borderRadius: 16, padding: 16, borderWidth: 1, marginBottom: 11 }, historyDate: { fontFamily: serif, fontSize: 16 }, searchInput: { borderRadius: 14, borderWidth: 1, marginHorizontal: 20, marginBottom: 18, padding: 14, fontSize: 16 },
 });
